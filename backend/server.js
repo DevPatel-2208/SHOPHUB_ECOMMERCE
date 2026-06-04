@@ -132,16 +132,28 @@ const writeActivePortFile = (port) => {
 const httpServer = http.createServer(app);
 
 // ── Socket.IO Configuration ──────────────────────────────────────
+const allowedOrigins = () => {
+  const origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'https://shophubx.netlify.app',
+  ];
+  for (const key of ['CLIENT_URL', 'ADMIN_URL', 'FRONTEND_URLS']) {
+    const val = process.env[key];
+    if (val) {
+      for (const url of val.split(',').map(s => s.trim())) {
+        if (url) origins.push(url);
+      }
+    }
+  }
+  return [...new Set(origins)];
+};
+
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      process.env.CLIENT_URL || 'http://localhost:5173',
-      process.env.ADMIN_URL || 'http://localhost:5174',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174',
-    ],
+    origin: allowedOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   },
@@ -174,14 +186,13 @@ app.use(helmet({
 app.use(compression());
 app.use(hpp());
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    process.env.ADMIN_URL || 'http://localhost:5174',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins();
+    if (allowed.includes(origin)) return callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
