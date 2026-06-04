@@ -76,8 +76,10 @@ let ACTIVE_PORT = null;
 // ── Dynamic Port Detection ────────────────────────────────────────
 // Range of ports to try (configurable via PORT_RANGE in .env)
 const PORT_RANGE = (process.env.PORT_RANGE || '5000-5003').split('-').map(Number);
-const START_PORT = PORT_RANGE[0] || 5000;
-const END_PORT   = PORT_RANGE[1] || 5003;
+const USE_DYNAMIC_PORT = process.env.NODE_ENV !== 'production' && !process.env.RENDER;
+const DEPLOYMENT_PORT = Number(process.env.PORT || 10000);
+const START_PORT = USE_DYNAMIC_PORT ? (PORT_RANGE[0] || 5000) : DEPLOYMENT_PORT;
+const END_PORT = USE_DYNAMIC_PORT ? (PORT_RANGE[1] || 5003) : DEPLOYMENT_PORT;
 
 /**
  * Probe whether a port is available by briefly listening on it.
@@ -328,7 +330,7 @@ const startServer = async () => {
     writeActivePortFile(ACTIVE_PORT);
 
     // ── Start listening ──────────────────────────────────────────
-    httpServer.listen(ACTIVE_PORT, () => {
+    httpServer.listen(ACTIVE_PORT, '0.0.0.0', () => {
       console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       console.log(`🚀  Server running on port ${ACTIVE_PORT}`);
       console.log(`🌐  URL: ${serverUrl}`);

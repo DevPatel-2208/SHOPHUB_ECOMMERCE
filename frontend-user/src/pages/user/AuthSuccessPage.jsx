@@ -68,7 +68,7 @@ const AuthSuccessPage = () => {
             >
               <CheckCircle className="w-10 h-10 text-emerald-500" />
             </motion.div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Welcome to ShopHub!</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Welcome to ShopHubX!</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">You have been signed in successfully</p>
           </>
         )}

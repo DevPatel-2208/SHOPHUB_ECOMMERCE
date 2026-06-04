@@ -175,7 +175,7 @@ const HeroSection = ({ stats, featuredProducts }) => {
                 </span>
               </h1>
               <p className="mt-2 text-xl sm:text-2xl lg:text-3xl font-display font-bold text-white/90">
-                ShopHub.
+                ShopHubX.
               </p>
             </motion.div>
 
@@ -259,13 +259,13 @@ const HeroSection = ({ stats, featuredProducts }) => {
             >
               {/* Main Product Showcase Card */}
               <div className="relative w-[340px] xl:w-[380px] glass-premium rounded-3xl p-6 shadow-2xl shadow-black/30">
-                {/* ShopHub Brand Bar */}
+                {/* ShopHubX Brand Bar */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                       <ShoppingBag className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-display font-bold text-white text-lg">ShopHub</span>
+                    <span className="font-display font-bold text-white text-lg">ShopHubX</span>
                   </div>
                   <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 rounded-full">
                     <Truck className="w-3 h-3 text-green-400" />
@@ -350,7 +350,7 @@ const HeroSection = ({ stats, featuredProducts }) => {
                     <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center mb-5">
                       <Sparkles className="w-10 h-10 text-primary-light" />
                     </div>
-                    <h3 className="font-display font-bold text-white text-xl mb-2">Welcome to ShopHub!</h3>
+                    <h3 className="font-display font-bold text-white text-xl mb-2">Welcome to ShopHubX!</h3>
                     <p className="text-white/60 text-sm leading-relaxed mb-5">
                       Discover trending products with free delivery, easy returns, and 24/7 support.
                     </p>

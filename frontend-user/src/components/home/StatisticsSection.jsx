@@ -67,7 +67,7 @@ const StatisticsSection = ({ stats }) => {
           className="text-center mb-8 sm:mb-12"
         >
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-            ShopHub in Numbers
+            ShopHubX in Numbers
           </h2>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-2 max-w-2xl mx-auto">
             Our growing community of shoppers and sellers

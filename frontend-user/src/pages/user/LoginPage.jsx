@@ -90,7 +90,8 @@ const LoginPage = () => {
       setOtpSent(true)
       toast.success('OTP sent to your email!')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed')
+      const validationErrors = err.response?.data?.errors
+      toast.error(validationErrors?.join(', ') || err.response?.data?.message || 'Registration failed')
     } finally {
       setIsLoading(false)
     }
@@ -119,7 +120,7 @@ const LoginPage = () => {
       await api.post('/auth/resend-otp', { email: userEmail })
       toast.success('New OTP sent!')
     } catch (err) {
-      toast.error('Failed to resend OTP')
+      toast.error(err.response?.data?.message || 'Failed to resend OTP')
     }
   }
 
@@ -143,7 +144,7 @@ const LoginPage = () => {
 
         <div className="relative z-10 flex flex-col items-center justify-center px-12 text-white">
           <Logo size="xl" linkTo={null} onDark className="mb-6" />
-          <h1 className="text-4xl font-bold mb-3 text-center">Welcome to ShopHub</h1>
+          <h1 className="text-4xl font-bold mb-3 text-center">Welcome to ShopHubX</h1>
           <p className="text-lg text-white/80 mb-10 text-center max-w-md">
             Discover premium products at amazing prices. Join thousands of happy customers shopping with us.
           </p>

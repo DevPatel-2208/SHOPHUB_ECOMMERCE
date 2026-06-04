@@ -263,7 +263,7 @@ const OrdersPage = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2.5">
                           {order.user?.avatar ? (
-                            <img src={order.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-dark-border" />
+                            <img src={getImageUrl(order.user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-dark-border" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-xs font-bold text-primary">{order.user?.name?.charAt(0) || 'G'}</span>

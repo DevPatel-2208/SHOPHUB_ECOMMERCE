@@ -31,7 +31,7 @@ const Logo = ({ showText = true, size = 'md', linkTo = '/', onDark = false, clas
       )}
       {showText && (
         <span className={`${s.text} font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent whitespace-nowrap`}>
-          ShopHub
+          ShopHubX
         </span>
       )}
     </motion.div>

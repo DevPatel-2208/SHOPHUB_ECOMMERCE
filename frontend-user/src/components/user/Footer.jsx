@@ -64,7 +64,7 @@ const Footer = () => {
       links: [
         { name: '123 Business Park, Tech City, India - 110001', icon: MapPin, href: null },
         { name: '+91 98765 43210', icon: Phone, href: 'tel:+919876543210' },
-        { name: 'support@shophub.com', icon: Mail, href: 'mailto:support@shophub.com' },
+        { name: 'support@shophubx.com', icon: Mail, href: 'mailto:support@shophubx.com' },
       ],
     },
   ]
@@ -81,7 +81,7 @@ const Footer = () => {
                 <span className="text-white font-bold text-xl">S</span>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                ShopHub
+ShopHubX
               </span>
             </Link>
             <p className="text-sm text-gray-400 mb-6 leading-relaxed max-w-sm">
@@ -171,7 +171,7 @@ const Footer = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-500 flex items-center gap-1.5">
-              © {currentYear} ShopHub. Made with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> All rights reserved.
+              © {currentYear} ShopHubX. Made with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> All rights reserved.
             </p>
             <div className="flex items-center gap-3">
               {/* Theme Toggle */}

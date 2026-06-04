@@ -95,7 +95,7 @@ const ContactPage = () => {
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Mail, label: 'Email', value: 'support@shophub.com' },
+            { icon: Mail, label: 'Email', value: 'support@shophubx.com' },
             { icon: MessageSquare, label: 'Response Time', value: 'Within 24 hours' },
             { icon: AlertCircle, label: 'Urgent?', value: 'Call our support line' },
           ].map((item, i) => (

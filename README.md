@@ -115,6 +115,10 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_EMAIL=you@example.com
 SMTP_PASSWORD=your_email_password
+# Recommended on Render: use HTTPS email delivery to avoid SMTP timeouts
+RESEND_API_KEY=re_...
+FROM_NAME=ShopHubX
+FROM_EMAIL=noreply@your-verified-domain.com
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
@@ -130,6 +134,24 @@ ADMIN_URL=http://localhost:5174
 
 ```env
 VITE_API_URL=http://localhost:5000/api
+```
+
+### Production image storage
+
+Render's filesystem is ephemeral, so production uploads must use Cloudinary instead of `/uploads/...` paths.
+Set the real values from the Cloudinary dashboard in both the local backend `.env` and Render:
+
+```env
+CLOUDINARY_CLOUD_NAME=your-real-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+```
+
+To recover existing local uploads and replace their MongoDB paths with Cloudinary URLs:
+
+```bash
+cd backend
+npm run migrate:images
 ```
 
 ## 📦 Scripts

@@ -22,18 +22,27 @@ const cookieOptions = {
 // @route   POST /api/auth/register
 export const register = async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email: rawEmail, phone, password } = req.body;
+    const email = rawEmail.toLowerCase().trim();
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ success: false, message: 'Email already registered' });
+    let user = await User.findOne({ email }).select('+otp +otpExpire +password');
+    if (user?.isVerified) {
+      return res.status(409).json({ success: false, message: 'Email already registered' });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
 
-    const user = await User.create({
-      name, email, phone, password,
-      otp, otpExpire,
-    });
+    if (user) {
+      user.name = name;
+      user.phone = phone;
+      user.password = password;
+      user.otp = otp;
+      user.otpExpire = otpExpire;
+      await user.save();
+    } else {
+      user = await User.create({ name, email, phone, password, otp, otpExpire });
+    }
 
     await sendEmail({
       to: email,
@@ -54,7 +63,15 @@ export const register = async (req, res) => {
 
     res.status(201).json({ success: true, message: 'OTP sent to your email. Please verify.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Registration error:', error.message);
+    const emailFailed = error.message.includes('email') || error.message.includes('Email');
+    res.status(emailFailed ? 503 : 500).json({
+      success: false,
+      message: emailFailed
+        ? 'Account saved, but OTP email could not be sent. Please try again in a moment.'
+        : 'Registration failed. Please try again.',
+      ...(process.env.NODE_ENV !== 'production' && { error: error.message }),
+    });
   }
 };
 
@@ -167,9 +184,12 @@ export const login = async (req, res) => {
 // @route   POST /api/auth/resend-otp
 export const resendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
     const user = await User.findOne({ email }).select('+otp +otpExpire');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isVerified) return res.status(409).json({ success: false, message: 'Email is already verified' });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
@@ -184,7 +204,8 @@ export const resendOTP = async (req, res) => {
 
     res.json({ success: true, message: 'New OTP sent to your email' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Resend OTP error:', error.message);
+    res.status(503).json({ success: false, message: 'OTP email could not be sent. Please try again in a moment.' });
   }
 };
 
