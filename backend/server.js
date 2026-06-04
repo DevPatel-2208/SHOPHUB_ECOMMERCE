@@ -309,10 +309,14 @@ const startServer = async () => {
     const serverUrl = `http://localhost:${ACTIVE_PORT}`;
 
     // Update dependent env vars so downstream code uses the right URL
-    if (!process.env.SERVER_URL || process.env.SERVER_URL.includes(`:${START_PORT}`)) {
+    const isLocalDevUrl = (url) => {
+      try { const u = new URL(url); return u.hostname === 'localhost' || u.hostname === '127.0.0.1'; }
+      catch { return false; }
+    };
+    if (!process.env.SERVER_URL || isLocalDevUrl(process.env.SERVER_URL)) {
       process.env.SERVER_URL = serverUrl;
     }
-    if (!process.env.GOOGLE_CALLBACK_URL || process.env.GOOGLE_CALLBACK_URL.includes(`:${START_PORT}`)) {
+    if (!process.env.GOOGLE_CALLBACK_URL || isLocalDevUrl(process.env.GOOGLE_CALLBACK_URL)) {
       process.env.GOOGLE_CALLBACK_URL = `${serverUrl}/api/auth/google/callback`;
     }
 
