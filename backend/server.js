@@ -139,6 +139,7 @@ const allowedOrigins = () => {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'https://shophubx.netlify.app',
+    'https://shophubx-admin.netlify.app',
   ];
   for (const key of ['CLIENT_URL', 'ADMIN_URL', 'FRONTEND_URLS']) {
     const val = process.env[key];
