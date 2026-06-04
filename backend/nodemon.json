@@ -1,0 +1,6 @@
+{
+  "watch": ["*.js", "config/**/*.js", "controllers/**/*.js", "middleware/**/*.js", "models/**/*.js", "routes/**/*.js", "sockets/**/*.js", "utils/**/*.js"],
+  "ignore": ["node_modules", "uploads"],
+  "delay": 500,
+  "signal": "SIGTERM"
+}
