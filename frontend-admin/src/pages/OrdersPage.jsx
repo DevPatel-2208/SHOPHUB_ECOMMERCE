@@ -11,6 +11,7 @@ import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import OrderDetailDrawer from '../components/orders/OrderDetailDrawer.jsx'
+import { getImageUrl } from '../utils/imageUrl.js'
 import { TableRowSkeleton } from '../components/ui/Skeleton.jsx'
 
 const STATUS_OPTIONS = [
