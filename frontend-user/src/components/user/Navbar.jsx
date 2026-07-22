@@ -555,11 +555,8 @@ const Navbar = () => {
               {/* Drawer Header */}
               <div className="sticky top-0 z-10 p-4 border-b border-gray-100 dark:border-dark-border bg-white/95 dark:bg-dark/95 backdrop-blur-xl">
                 <div className="flex items-center justify-between">
-                  <Link to="/" className="flex items-center gap-2.5" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary-light to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
-                      <span className="text-white font-bold text-xl">S</span>
-                    </div>
-                    <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">ShopHubX</span>
+                  <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Logo size="sm" />
                   </Link>
                   <motion.button
                     onClick={() => setIsMobileMenuOpen(false)}

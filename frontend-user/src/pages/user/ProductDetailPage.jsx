@@ -758,7 +758,7 @@ const ProductDetailPage = () => {
 
   // ─── Handlers ───
   const handleAddToCart = async () => {
-    if (!isAuthenticated) { toast.error('Please login to add to cart'); return }
+    if (!isAuthenticated) { navigate('/login', { state: { from: location.pathname } }); return }
     setAddingToCart(true)
     try {
       await dispatch(addToCart({ productId: id, quantity })).unwrap()
@@ -771,7 +771,7 @@ const ProductDetailPage = () => {
   }
 
   const handleBuyNow = () => {
-    if (!isAuthenticated) { toast.error('Please login to continue'); return }
+    if (!isAuthenticated) { navigate('/login', { state: { from: location.pathname } }); return }
     navigate('/checkout', {
       state: {
         directBuy: {

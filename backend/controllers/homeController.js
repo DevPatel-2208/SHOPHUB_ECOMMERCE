@@ -6,6 +6,7 @@ import Product from '../models/Product.js';
 import Brand from '../models/Brand.js';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
+import { getCache, setCache } from '../config/redis.js';
 
 // @desc    Get all active banners
 // @route   GET /api/banners
@@ -74,6 +75,10 @@ export const getTestimonials = async (req, res) => {
 // @route   GET /api/home
 export const getHomepageData = async (req, res) => {
   try {
+    const cacheKey = 'homepage:data';
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const now = new Date();
 
     // Use Promise.allSettled so each query is independent — a populate CastError
@@ -127,7 +132,7 @@ export const getHomepageData = async (req, res) => {
         .populate('category', 'name slug')
         .populate({ path: 'brand', select: 'name' })
         .sort({ createdAt: -1 })
-        .limit(10)
+        .limit(4)
         .lean(),
 
       // New arrivals
@@ -135,7 +140,7 @@ export const getHomepageData = async (req, res) => {
         .populate('category', 'name slug')
         .populate({ path: 'brand', select: 'name' })
         .sort({ createdAt: -1 })
-        .limit(10)
+        .limit(4)
         .lean(),
 
       // Active offers
@@ -152,18 +157,18 @@ export const getHomepageData = async (req, res) => {
       Review.find({ isActive: true, rating: { $gte: 4 } })
         .populate('user', 'name avatar')
         .sort({ createdAt: -1 })
-        .limit(10)
+        .limit(5)
         .lean(),
 
       // Brands
-      Brand.find({ isActive: true }).sort({ order: 1 }).limit(12).lean(),
+      Brand.find({ isActive: true }).sort({ order: 1 }).limit(6).lean(),
 
       // Best sellers (products with most reviews/orders)
       Product.find({ isActive: true, stock: { $gt: 0 } })
         .populate('category', 'name slug')
         .populate({ path: 'brand', select: 'name' })
         .sort({ numReviews: -1, ratings: -1 })
-        .limit(10)
+        .limit(4)
         .lean(),
 
       // Trending products (highest rated + most reviewed)
@@ -171,7 +176,7 @@ export const getHomepageData = async (req, res) => {
         .populate('category', 'name slug')
         .populate({ path: 'brand', select: 'name' })
         .sort({ ratings: -1, numReviews: -1 })
-        .limit(10)
+        .limit(4)
         .lean(),
 
       // Statistics
@@ -217,7 +222,7 @@ export const getHomepageData = async (req, res) => {
       reviews: 0, happyCustomers: 0, inStock: 0,
     });
 
-    res.json({
+    const result = {
       success: true,
       data: {
         banners: extract(results[0]),
@@ -231,7 +236,9 @@ export const getHomepageData = async (req, res) => {
         trendingProducts: extract(results[8]),
         stats: statsResult,
       },
-    });
+    };
+    await setCache(cacheKey, result, 300);
+    res.json(result);
   } catch (error) {
     console.error('getHomepageData error:', error);
     res.status(500).json({ success: false, message: error.message });

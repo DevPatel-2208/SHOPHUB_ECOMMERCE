@@ -12,7 +12,7 @@ const TrendingProductsSection = ({ products, isLoading, title = 'Trending Now', 
   if (isLoading) return <SectionSkeleton />
   if (!products || products.length === 0) return null
 
-  const topRated = [...products].sort((a, b) => b.ratings - a.ratings).slice(0, 8)
+  const topRated = [...products].sort((a, b) => b.ratings - a.ratings).slice(0, 4)
 
   return (
     <section className="py-10 sm:py-14 lg:py-16 bg-white dark:bg-dark">

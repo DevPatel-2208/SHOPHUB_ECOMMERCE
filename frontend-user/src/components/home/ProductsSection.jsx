@@ -26,7 +26,7 @@ const ProductsSection = () => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true)
-        const params = { limit: 8 }
+        const params = { limit: 4 }
         if (activeCategory !== 'All') params.category = activeCategory.toLowerCase()
         if (activeSort === 'newest') params.sort = '-createdAt'
         else if (activeSort === 'price_asc') params.sort = 'price'

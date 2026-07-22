@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Heart, ShoppingCart, Star, Eye, Tag } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -11,6 +11,7 @@ import { getOfferLabel, comparePriceDiscount, formatCurrency } from '../../utils
 const ProductCard = ({ product, index = 0 }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAuthenticated } = useSelector((state) => state.auth)
   const wishlistProducts = useSelector((state) => state.wishlist.products)
   const isInWishlist = wishlistProducts?.some((p) => p._id === product._id)
@@ -19,7 +20,7 @@ const ProductCard = ({ product, index = 0 }) => {
     e.preventDefault()
     e.stopPropagation()
     if (!isAuthenticated) {
-      toast.error('Please login to add to cart')
+      navigate('/login', { state: { from: location.pathname } })
       return
     }
     try {

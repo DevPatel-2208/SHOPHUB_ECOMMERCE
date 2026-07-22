@@ -11,7 +11,7 @@ import 'swiper/css'
 const BestSellersSection = ({ products }) => {
   if (!products || products.length === 0) return null
 
-  const sorted = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)).slice(0, 8)
+  const sorted = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)).slice(0, 4)
 
   return (
     <section className="py-10 sm:py-14 lg:py-16 bg-white dark:bg-dark overflow-hidden">
