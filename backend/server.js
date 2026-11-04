@@ -40,7 +40,6 @@ import { connectRedis, disconnectRedis } from './config/redis.js';
 
 // Middleware
 import { apiLimiter } from './middleware/rateLimiter.js';
-import csurf from 'csurf';
 
 // Routes
 import authRoutes from './routes/authRoutes.js';
@@ -214,15 +213,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
-// CSRF Protection — skip for webhook (needs raw body)
-const csrfProtection = csurf({ cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' } });
-app.use((req, res, next) => {
-  if (req.originalUrl === '/api/payments/webhook' || req.originalUrl === '/api/server-info' || req.originalUrl === '/health') {
-    return next();
-  }
-  csrfProtection(req, res, next);
-});
-
 // ── Static Files ──────────────────────────────────────────────────
 app.use('/uploads', express.static('uploads'));
 
@@ -263,11 +253,6 @@ app.get('/api/wake-up', async (req, res) => {
 
 // ── Server Info Endpoint ──────────────────────────────────────────
 // Returns the active backend port so frontend can discover it at runtime.
-// CSRF Token Endpoint
-app.get('/api/csrf-token', (req, res) => {
-  res.json({ success: true, csrfToken: req.csrfToken() });
-});
-
 app.get('/api/server-info', (req, res) => {
   res.json({
     port: ACTIVE_PORT,
