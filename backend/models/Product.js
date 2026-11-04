@@ -32,7 +32,13 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
-productSchema.index({ price: 1, ratings: -1, createdAt: -1 });
+productSchema.index({ category: 1, isActive: 1, price: 1 });
+productSchema.index({ brand: 1, isActive: 1 });
+productSchema.index({ isActive: 1, isFeatured: 1, stock: 1 });
+productSchema.index({ isActive: 1, slug: 1 });
+productSchema.index({ ratings: -1, numReviews: -1 });
+productSchema.index({ price: 1, ratings: -1, createdAt: -1, isActive: 1 });
+productSchema.index({ stock: 1, isActive: 1, lowStockThreshold: 1 });
 
 productSchema.pre('save', function (next) {
   this.outOfStock = this.stock <= 0;

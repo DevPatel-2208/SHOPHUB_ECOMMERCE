@@ -4,10 +4,14 @@ import Brand from '../models/Brand.js';
 import Review from '../models/Review.js';
 import Offer from '../models/Offer.js';
 import { findBestOffer } from '../utils/pricing.js';
+import { getCache, setCache } from '../config/redis.js';
 
 // @desc    Get all products with search, filter, sort
 // @route   GET /api/products
 export const getProducts = async (req, res) => {
+  const cacheKey = `products:${JSON.stringify(req.query)}`;
+  const cached = await getCache(cacheKey);
+  if (cached) return res.json(cached);
   try {
     const {
       page = 1, limit = 12, search, category, subcategory, brand,
@@ -105,6 +109,7 @@ export const getProducts = async (req, res) => {
       filters: { brands: await Brand.find({ isActive: true }).select('name slug').lean() },
     };
 
+    await setCache(cacheKey, result, 300);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -278,35 +283,48 @@ export const getProductReviewSummary = async (req, res) => {
   }
 };
 
+const ALLOWED_PRODUCT_FIELDS = [
+  'name', 'description', 'price', 'comparePrice', 'thumbnail', 'images', 'video',
+  'category', 'subcategory', 'brand', 'stock', 'lowStockThreshold',
+  'sku', 'weight', 'dimensions', 'isActive', 'isFeatured',
+  'specifications', 'tags', 'seoTitle', 'seoDescription', 'slug'
+];
+
+const filterProductFields = (body, files) => {
+  const filtered = {};
+  for (const field of ALLOWED_PRODUCT_FIELDS) {
+    if (body[field] !== undefined) filtered[field] = body[field];
+  }
+  // Handle uploaded images
+  if (files && files.length > 0) {
+    filtered.images = files.map(file => file.path);
+  }
+  // Parse JSON string fields from FormData
+  for (const jsonField of ['specifications', 'tags', 'dimensions']) {
+    if (filtered[jsonField] && typeof filtered[jsonField] === 'string') {
+      try { filtered[jsonField] = JSON.parse(filtered[jsonField]); }
+      catch { delete filtered[jsonField]; }
+    }
+  }
+  // Convert numeric fields
+  if (filtered.price !== undefined) filtered.price = Number(filtered.price);
+  if (filtered.comparePrice !== undefined) filtered.comparePrice = Number(filtered.comparePrice);
+  if (filtered.stock !== undefined) filtered.stock = Number(filtered.stock) || 0;
+  if (filtered.lowStockThreshold !== undefined) filtered.lowStockThreshold = Number(filtered.lowStockThreshold);
+  if (filtered.weight !== undefined) filtered.weight = Number(filtered.weight);
+  // Convert boolean fields
+  if (filtered.isActive !== undefined) filtered.isActive = filtered.isActive === 'true' || filtered.isActive === true;
+  if (filtered.isFeatured !== undefined) filtered.isFeatured = filtered.isFeatured === 'true' || filtered.isFeatured === true;
+
+  return filtered;
+};
+
 // @desc    Create product (Admin)
 // @route   POST /api/products
 export const createProduct = async (req, res) => {
   try {
-    // Handle uploaded images from multer-cloudinary
-    if (req.files && req.files.length > 0) {
-      req.body.images = req.files.map(file => file.path);
-    }
-    // Parse JSON string fields from FormData
-    if (req.body.specifications && typeof req.body.specifications === 'string') {
-      req.body.specifications = JSON.parse(req.body.specifications);
-    }
-    if (req.body.tags && typeof req.body.tags === 'string') {
-      req.body.tags = JSON.parse(req.body.tags);
-    }
-    if (req.body.dimensions && typeof req.body.dimensions === 'string') {
-      req.body.dimensions = JSON.parse(req.body.dimensions);
-    }
-    // Convert numeric fields
-    req.body.price = Number(req.body.price);
-    if (req.body.comparePrice) req.body.comparePrice = Number(req.body.comparePrice);
-    req.body.stock = Number(req.body.stock) || 0;
-    if (req.body.lowStockThreshold) req.body.lowStockThreshold = Number(req.body.lowStockThreshold);
-    if (req.body.weight) req.body.weight = Number(req.body.weight);
-    // Convert boolean fields
-    if (req.body.isActive) req.body.isActive = req.body.isActive === 'true' || req.body.isActive === true;
-    if (req.body.isFeatured) req.body.isFeatured = req.body.isFeatured === 'true' || req.body.isFeatured === true;
-
-    const product = await Product.create(req.body);
+    const productData = filterProductFields(req.body, req.files);
+    const product = await Product.create(productData);
     res.status(201).json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -317,37 +335,23 @@ export const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 export const updateProduct = async (req, res) => {
   try {
-    // Handle uploaded images - merge new with existing
+    const productData = filterProductFields(req.body, req.files);
+
+    // Handle existing images merge
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => file.path);
-      const existingImages = req.body.existingImages ? JSON.parse(req.body.existingImages) : [];
-      req.body.images = [...existingImages, ...newImages];
+      const existingImages = req.body.existingImages
+        ? (typeof req.body.existingImages === 'string' ? JSON.parse(req.body.existingImages) : req.body.existingImages)
+        : [];
+      productData.images = [...existingImages, ...newImages];
     } else if (req.body.existingImages) {
-      req.body.images = JSON.parse(req.body.existingImages);
+      productData.images = typeof req.body.existingImages === 'string'
+        ? JSON.parse(req.body.existingImages)
+        : req.body.existingImages;
     }
-    delete req.body.existingImages;
 
-    // Parse JSON string fields from FormData
-    if (req.body.specifications && typeof req.body.specifications === 'string') {
-      req.body.specifications = JSON.parse(req.body.specifications);
-    }
-    if (req.body.tags && typeof req.body.tags === 'string') {
-      req.body.tags = JSON.parse(req.body.tags);
-    }
-    if (req.body.dimensions && typeof req.body.dimensions === 'string') {
-      req.body.dimensions = JSON.parse(req.body.dimensions);
-    }
-    // Convert numeric fields
-    if (req.body.price) req.body.price = Number(req.body.price);
-    if (req.body.comparePrice) req.body.comparePrice = Number(req.body.comparePrice);
-    if (req.body.stock) req.body.stock = Number(req.body.stock);
-    if (req.body.lowStockThreshold) req.body.lowStockThreshold = Number(req.body.lowStockThreshold);
-    if (req.body.weight) req.body.weight = Number(req.body.weight);
-    // Convert boolean fields
-    if (req.body.isActive) req.body.isActive = req.body.isActive === 'true' || req.body.isActive === true;
-    if (req.body.isFeatured) req.body.isFeatured = req.body.isFeatured === 'true' || req.body.isFeatured === true;
-
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true, runValidators: true });
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
     res.json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -411,6 +415,10 @@ export const getFeatured = async (req, res) => {
 // @route   GET /api/products/filters/metadata
 export const getFilterMetadata = async (req, res) => {
   try {
+    const cacheKey = 'products:filterMetadata';
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const baseQuery = { isActive: true };
 
     // Price range
@@ -492,7 +500,7 @@ export const getFilterMetadata = async (req, res) => {
     const inStockCount = await Product.countDocuments({ isActive: true, stock: { $gt: 0 } });
     const outOfStockCount = await Product.countDocuments({ isActive: true, stock: { $lte: 0 } });
 
-    res.json({
+    const result = {
       success: true,
       filters: {
         priceRange: { min: priceRange.minPrice, max: priceRange.maxPrice },
@@ -512,7 +520,9 @@ export const getFilterMetadata = async (req, res) => {
         offers: { count: offerCount },
         availability: { inStock: inStockCount, outOfStock: outOfStockCount },
       },
-    });
+    };
+    await setCache(cacheKey, result, 600);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

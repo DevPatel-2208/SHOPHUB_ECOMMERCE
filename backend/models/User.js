@@ -15,8 +15,10 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true },
     otp: { type: String, select: false },
     otpExpire: { type: Date, select: false },
+    otpAttempts: { type: Number, default: 0, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },
+    resetPasswordAttempts: { type: Number, default: 0, select: false },
     addresses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Address' }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     lastLogin: { type: Date },
@@ -61,6 +63,11 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 userSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 };
+
+// TTL indexes for auto-cleanup of temporary fields
+userSchema.index({ otpExpire: 1 }, { expireAfterSeconds: 0, partialFilterExpression: { otpExpire: { $exists: true } } });
+userSchema.index({ resetPasswordExpire: 1 }, { expireAfterSeconds: 0, partialFilterExpression: { resetPasswordExpire: { $exists: true } } });
+userSchema.index({ isActive: 1, role: 1 });
 
 const User = mongoose.model('User', userSchema);
 export default User;

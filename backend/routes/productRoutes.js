@@ -2,6 +2,7 @@ import express from 'express';
 import { getProducts, getProduct, getProductDetails, getProductReviewSummary, createProduct, updateProduct, deleteProduct, getFeatured, searchProducts, getFilterMetadata, getFilterCounts } from '../controllers/productController.js';
 import { protect, adminOnly } from '../middleware/auth.js';
 import { uploadMultiple } from '../middleware/upload.js';
+import { validate, schemas } from '../middleware/validator.js';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -14,8 +15,8 @@ router.post('/filter-counts', getFilterCounts);
 router.get('/:id/details', getProductDetails);
 router.get('/:id/review-summary', getProductReviewSummary);
 router.get('/:id', getProduct);
-router.post('/', protect, adminOnly, uploadMultiple, createProduct);
-router.put('/:id', protect, adminOnly, uploadMultiple, updateProduct);
+router.post('/', protect, adminOnly, uploadMultiple, validate(schemas.product), createProduct);
+router.put('/:id', protect, adminOnly, uploadMultiple, validate(schemas.product), updateProduct);
 router.delete('/:id', protect, adminOnly, deleteProduct);
 
 export default router;

@@ -19,12 +19,13 @@ export const createOrder = async (req, res) => {
     const cart = await Cart.findOne({ user: req.user.id }).populate('items.product');
     if (!cart || cart.items.length === 0) return res.status(400).json({ success: false, message: 'Cart is empty' });
 
-    // Validate that all products still exist and have sufficient stock
+    // Validate and atomically deduct stock using MongoDB transactions
+    const productIds = cart.items.map(i => i.product._id);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
     for (const item of cart.items) {
-      if (!item.product) {
-        return res.status(400).json({ success: false, message: 'A product in your cart is no longer available. Please refresh your cart.' });
-      }
-      const product = await Product.findById(item.product._id).select('name stock outOfStock price');
+      const product = productMap.get(item.product._id.toString());
       if (!product) {
         return res.status(400).json({ success: false, message: `${item.product.name} is no longer available` });
       }
@@ -39,13 +40,22 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Deduct stock
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
-      const newStock = product.stock - item.quantity;
-      await Product.findByIdAndUpdate(product._id, {
-        $set: { stock: newStock, outOfStock: newStock <= 0 }
-      });
+    // Atomically deduct stock — only for COD orders (online payment orders deduct on payment)
+    if (paymentMethod === 'cod') {
+      for (const item of cart.items) {
+        const result = await Product.findOneAndUpdate(
+          { _id: item.product._id, stock: { $gte: item.quantity } },
+          { $inc: { stock: -item.quantity }, $set: { outOfStock: { $lte: [{ $subtract: ['$stock', item.quantity] }, 0] } } },
+          { new: true }
+        );
+        if (!result) {
+          const product = await Product.findById(item.product._id).select('name stock');
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product?.name || 'product'}. Available: ${product?.stock || 0}, requested: ${item.quantity}`
+          });
+        }
+      }
     }
 
     // Re-compute all pricing from backend (security: never trust frontend prices)
@@ -495,6 +505,20 @@ export const updatePaymentStatus = async (orderId, status, paymentData = {}) => 
       order.paidAt = new Date();
       order.status = 'processing';
       order.trackingStatus = 'order_confirmed';
+
+      // Deduct stock on successful payment (for online payment orders)
+      for (const item of order.orderItems) {
+        const result = await Product.findOneAndUpdate(
+          { _id: item.product, stock: { $gte: item.quantity } },
+          { $inc: { stock: -item.quantity } },
+          { new: true }
+        );
+        if (!result) {
+          console.error(`Stock deduction failed for product ${item.product} in order ${orderId}`);
+        } else {
+          await Product.findByIdAndUpdate(item.product, { outOfStock: result.stock <= 0 });
+        }
+      }
 
       // Add timeline events
       order.timeline.push({

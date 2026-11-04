@@ -18,6 +18,9 @@ import CustomersPage from './pages/CustomersPage.jsx'
 import SubscribersPage from './pages/SubscribersPage.jsx'
 import NewsletterPage from './pages/NewsletterPage.jsx'
 import NotificationHistoryPage from './pages/NotificationHistoryPage.jsx'
+import CouponsPage from './pages/CouponsPage.jsx'
+import StockPage from './pages/StockPage.jsx'
+import ShipmentsPage from './pages/ShipmentsPage.jsx'
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.auth)
@@ -47,6 +50,9 @@ function App() {
         <Route path="subscribers" element={<SubscribersPage />} />
         <Route path="newsletter" element={<NewsletterPage />} />
         <Route path="notifications" element={<NotificationHistoryPage />} />
+        <Route path="coupons" element={<CouponsPage />} />
+        <Route path="stock" element={<StockPage />} />
+        <Route path="shipments" element={<ShipmentsPage />} />
       </Route>
     </Routes>
   )

@@ -2,19 +2,26 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import UserSession from '../models/UserSession.js';
+import LoginActivity from '../models/LoginActivity.js';
 import { sendEmail } from '../config/email.js';
 import { logUserActivity, logSecurityEvent, logLoginActivity } from '../utils/activityLogger.js';
 
-// Generate JWT Token
+// Generate JWT Token with jti for session identification
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
+  const jti = crypto.randomBytes(16).toString('hex');
+  return jwt.sign({ id, role, jti }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 };
 
-// Cookie options
+// Generate Refresh Token
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
+// Cookie options for access token
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   maxAge: parseInt(process.env.JWT_COOKIE_EXPIRE) * 24 * 60 * 60 * 1000,
 };
 
@@ -30,8 +37,9 @@ export const register = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+    const otpAttempts = 0;
 
     if (user) {
       user.name = name;
@@ -39,9 +47,10 @@ export const register = async (req, res) => {
       user.password = password;
       user.otp = otp;
       user.otpExpire = otpExpire;
+      user.otpAttempts = 0;
       await user.save();
     } else {
-      user = await User.create({ name, email, phone, password, otp, otpExpire });
+      user = await User.create({ name, email, phone, password, otp, otpExpire, otpAttempts });
     }
 
     await sendEmail({
@@ -81,24 +90,34 @@ export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email }).select('+otp +otpExpire');
+    const user = await User.findOne({ email }).select('+otp +otpExpire +otpAttempts');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
+    if (user.otpAttempts >= 5) {
+      return res.status(429).json({ success: false, message: 'Too many attempts. Request a new OTP.' });
+    }
+
     if (user.otp !== otp || user.otpExpire < Date.now()) {
+      user.otpAttempts = (user.otpAttempts || 0) + 1;
+      await user.save();
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpire = undefined;
+    user.otpAttempts = undefined;
     await user.save();
 
     const token = generateToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
     res.cookie('token', token, cookieOptions);
+    res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/api/auth/refresh' });
 
     res.json({
       success: true,
       token,
+      refreshToken,
       user: { id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
     });
   } catch (error) {
@@ -282,11 +301,42 @@ export const getMe = async (req, res) => {
   }
 };
 
+// @desc    Refresh token
+// @route   POST /api/auth/refresh
+export const refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    if (!refreshToken) return res.status(401).json({ success: false, message: 'No refresh token' });
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    if (decoded.type !== 'refresh') return res.status(401).json({ success: false, message: 'Invalid token type' });
+
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user || !user.isActive) return res.status(401).json({ success: false, message: 'User not found' });
+
+    const newToken = generateToken(user._id, user.role);
+    res.cookie('token', newToken, cookieOptions);
+
+    res.json({ success: true, token: newToken });
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+  }
+};
+
 // @desc    Logout
 // @route   POST /api/auth/logout
 export const logout = async (req, res) => {
-  res.cookie('token', 'none', { ...cookieOptions, maxAge: 0 });
-  res.json({ success: true, message: 'Logged out successfully' });
+  try {
+    if (req.user) {
+      await UserSession.updateMany({ user: req.user.id, isActive: true }, { isActive: false });
+    }
+    res.cookie('token', 'none', { ...cookieOptions, maxAge: 0 });
+    res.cookie('refreshToken', 'none', { ...cookieOptions, path: '/api/auth/refresh', maxAge: 0 });
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    res.cookie('token', 'none', { ...cookieOptions, maxAge: 0 });
+    res.json({ success: true, message: 'Logged out successfully' });
+  }
 };
 
 // @desc    Google OAuth callback

@@ -36,9 +36,11 @@ const __dirname = path.dirname(__filename);
 
 // Config
 import connectDB from './config/db.js';
+import { connectRedis, disconnectRedis } from './config/redis.js';
 
 // Middleware
 import { apiLimiter } from './middleware/rateLimiter.js';
+import csurf from 'csurf';
 
 // Routes
 import authRoutes from './routes/authRoutes.js';
@@ -212,6 +214,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
+// CSRF Protection — skip for webhook (needs raw body)
+const csrfProtection = csurf({ cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' } });
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/payments/webhook' || req.originalUrl === '/api/server-info' || req.originalUrl === '/health') {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
+
 // ── Static Files ──────────────────────────────────────────────────
 app.use('/uploads', express.static('uploads'));
 
@@ -233,8 +244,30 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ── Wake-up / Warm-up endpoint for Render cold start prevention ──
+app.get('/api/wake-up', async (req, res) => {
+  try {
+    const { getCache, setCache } = await import('./config/redis.js');
+    const cached = await getCache('homepage:data');
+    if (cached) {
+      return res.json({ status: 'warm', cache: 'hit' });
+    }
+    // Trigger cache warm if empty
+    const { default: Product } = await import('./models/Product.js');
+    const count = await Product.countDocuments({ isActive: true }).maxTimeMS(3000);
+    res.json({ status: 'warming', products: count });
+  } catch (err) {
+    res.json({ status: 'alive', note: 'cache not available' });
+  }
+});
+
 // ── Server Info Endpoint ──────────────────────────────────────────
 // Returns the active backend port so frontend can discover it at runtime.
+// CSRF Token Endpoint
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ success: true, csrfToken: req.csrfToken() });
+});
+
 app.get('/api/server-info', (req, res) => {
   res.json({
     port: ACTIVE_PORT,
@@ -289,8 +322,9 @@ cron.schedule('0 * * * *', () => {
   checkLowStock();
 });
 
-// ── Connect DB & Start Server ─────────────────────────────────────
+// ── Connect DB & Cache & Start Server ──────────────────────────────
 connectDB();
+connectRedis();
 
 /**
  * Safely start the HTTP server on the first available port.
@@ -337,6 +371,22 @@ const startServer = async () => {
       console.log(`📱  Client URL: ${process.env.CLIENT_URL}`);
       console.log(`🔧  Admin URL:  ${process.env.ADMIN_URL}`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+      // ── Post-startup: pre-warm homepage cache ──────────────
+      setTimeout(async () => {
+        try {
+          const { getCache, setCache } = await import('./config/redis.js');
+          const cached = await getCache('homepage:data');
+          if (!cached) {
+            console.log('🌡️  Warming homepage cache...');
+            const response = await fetch(`${serverUrl}/api/home`);
+            if (response.ok) console.log('✅ Homepage cache warmed successfully');
+            else console.warn('⚠️  Homepage cache warm returned non-OK');
+          }
+        } catch (warmErr) {
+          console.warn('⚠️  Cache warm skipped:', warmErr.message);
+        }
+      }, 3000);
     });
 
     // ── Server-level error handler (post-listen) ─────────────────
@@ -387,10 +437,14 @@ const gracefulShutdown = (signal) => {
     // Then close HTTP server
     httpServer.close(() => {
       console.log('✅ HTTP server closed.');
-      mongoose.connection.close(false).then(() => {
+      mongoose.connection.close(false).then(async () => {
         console.log('✅ MongoDB connection closed.');
+        await disconnectRedis();
         process.exit(0);
-      }).catch(() => process.exit(0));
+      }).catch(async () => {
+        await disconnectRedis();
+        process.exit(0);
+      });
     });
   });
 

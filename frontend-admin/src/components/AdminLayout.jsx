@@ -7,7 +7,8 @@ import {
   LayoutDashboard, PackagePlus, ShoppingBag, Star, FolderTree,
   Layers, Award, SlidersHorizontal, Box, Percent, ListChecks,
   ClipboardList, Users, Mail, MailPlus, LogOut, Menu, X,
-  Search, Sun, Moon, ChevronLeft, ChevronDown, Settings
+  Search, Sun, Moon, ChevronLeft, ChevronDown, Settings,
+  Ticket, Package, Truck, Bell
 } from 'lucide-react'
 import { logout } from '../redux/slices/authSlice.js'
 import Logo from './ui/Logo.jsx'
@@ -60,6 +61,7 @@ const sidebarSections = [
     title: 'ORDER MANAGEMENT',
     items: [
       { icon: ClipboardList, label: 'Orders', path: '/orders' },
+      { icon: Truck, label: 'Shipments', path: '/shipments' },
     ],
   },
   {
@@ -71,8 +73,21 @@ const sidebarSections = [
   {
     title: 'MARKETING',
     items: [
+      { icon: Ticket, label: 'Coupons', path: '/coupons' },
       { icon: Mail, label: 'Subscribers', path: '/subscribers' },
       { icon: MailPlus, label: 'Send Newsletter', path: '/newsletter' },
+    ],
+  },
+  {
+    title: 'INVENTORY',
+    items: [
+      { icon: Package, label: 'Stock Management', path: '/stock' },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { icon: Bell, label: 'Notifications', path: '/notifications' },
     ],
   },
 ]

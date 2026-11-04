@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { useTheme } from './context/ThemeContext.jsx'
 import { fetchCart } from './redux/slices/cartSlice.js'
 import { fetchWishlist } from './redux/slices/wishlistSlice.js'
+import { wakeUpBackend } from './services/wakeUpService.js'
 import Navbar from './components/user/Navbar.jsx'
 import Footer from './components/user/Footer.jsx'
 import HomePage from './pages/user/HomePage.jsx'
@@ -56,6 +57,10 @@ function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
+
+  useEffect(() => {
+    wakeUpBackend()
+  }, [])
 
   // Fetch cart and wishlist when user authenticates
   useEffect(() => {
